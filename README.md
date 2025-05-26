@@ -100,6 +100,7 @@ Contiene:
 
     Non necessaria se usi il programma già pronto!
     Se vuoi compilarlo da solo, è stato progettato per funzionare con PyInstaller in modalità --onedir.
+    I file backend.html e frontend.html vanno inseriti in una cartella chiamata Templates
 
 📜 Licenza & Credits
 
