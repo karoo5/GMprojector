@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GMProjector - Control Panel</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+	<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.4/socket.io.js"></script> --> 
+    <style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+    color: #ffeb3b;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.header h1 {
+    font-size: 3rem;
+    margin-bottom: 10px;
+    text-shadow: 2px 2px 4px rgba(255, 235, 59, 0.3);
+    color: #ffeb3b;
+}
+
+.header p {
+    font-size: 1.2rem;
+    opacity: 0.9;
+    color: #ffeb3b;
+}
+
+.control-panel {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-bottom: 30px;
+}
+
+.section {
+    background: rgba(30, 30, 30, 0.8);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    padding: 25px;
+    border: 1px solid rgba(255, 235, 59, 0.3);
+}
+
+.section h2 {
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+    color: #ffeb3b;
+    border-bottom: 2px solid rgba(255, 235, 59, 0.3);
+    padding-bottom: 10px;
+}
+
+.drop-zone {
+    border: 3px dashed rgba(255, 235, 59, 0.5);
+    border-radius: 10px;
+    padding: 40px;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    margin-bottom: 15px;
+    color: #ffeb3b;
+}
+
+.drop-zone:hover,
+.drop-zone.dragover {
+    border-color: #ffc107;
+    background: rgba(255, 193, 7, 0.1);
+    transform: scale(1.02);
+}
+
+.drop-zone i {
+    font-size: 3rem;
+    margin-bottom: 15px;
+    opacity: 0.7;
+}
+
+.file-input {
+    display: none;
+}
+
+.btn {
+    background: linear-gradient(45deg, #ffc107, #ff9800);
+    color: #000;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    margin: 5px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: bold;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(255, 193, 7, 0.6);
+}
+
+.btn-danger {
+    background: linear-gradient(45deg, #f44336, #d32f2f);
+    color: white;
+}
+
+.btn-danger:hover {
+    box-shadow: 0 4px 15px rgba(244, 67, 54, 0.4);
+}
+
+.mood-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.mood-btn {
+    background: linear-gradient(45deg, #212121, #424242);
+    color: #ffeb3b;
+    border: none;
+    padding: 15px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    text-transform: capitalize;
+    position: relative;
+}
+
+.mood-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(255, 235, 59, 0.3);
+}
+
+.mood-count {
+    position: absolute;
+    top: 5px;
+    right: 8px;
+    background: rgba(255, 235, 59, 0.3);
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    color: #000;
+}
+
+.status-panel {
+    background: rgba(33, 33, 33, 0.8);
+    border-radius: 10px;
+    padding: 20px;
+    margin-top: 20px;
+}
+
+.status-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255, 235, 59, 0.2);
+    color: #ffeb3b;
+}
+
+.status-item:last-child {
+    border-bottom: none;
+}
+
+.status-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #ffc107;
+    margin-left: 10px;
+}
+
+.status-indicator.inactive {
+    background: #f44336;
+}
+
+.preview-area {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.preview-image {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: 10px;
+    border: 2px solid rgba(255, 235, 59, 0.3);
+}
+
+@media (max-width: 768px) {
+    .control-panel {
+        grid-template-columns: 1fr;
+    }
+    
+    .header h1 {
+        font-size: 2rem;
+    }
+}
+
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎲  GMProjector</h1>
+            <p>Control Panel - Trascina, clicca e controlla la tua sessione</p>
+        </div>
+
+        <div class="control-panel">
+            <!-- Sezione Immagini -->
+            <div class="section">
+                <h2>📸 Gestione Immagini</h2>
+                <div class="drop-zone" id="dropZone">
+                    <div>📁</div>
+                    <p><strong>Trascina un'immagine qui</strong></p>
+                    <p>oppure clicca per selezionare</p>
+                    <small>(PNG, JPG, GIF, WebP supportati)</small>
+                </div>
+                <input type="file" id="fileInput" class="file-input" accept="image/*">
+                <div>
+                    <button class="btn btn-danger" onclick="clearScreen()">🗑️ Pulisci Schermo</button>
+                </div>
+                <div class="preview-area" id="previewArea"></div>
+            </div>
+			
+
+<div class="section">
+  <h2>🧑 PNG Drag & Drop o Click</h2>
+  <label id="portraitDropZone" class="drop-zone" for="portraitFileInput">
+    Clicca o trascina qui il ritratto PNG
+    <input type="file" id="portraitFileInput" style="display:none;" accept="image/png,image/jpeg">
+  </label>
+  <button class="btn btn-danger" onclick="clearPortraits()">🧽 Pulisci </button>
+</div>
+
+
+			
+			<!-- Sezione Testo -->
+<div class="section">
+  <h2>📝 Mostra Testo</h2>
+  <textarea id="textInput" rows="4" placeholder="Inserisci il testo da mostrare..." style="width: 100%; padding: 10px; border-radius: 8px; resize: vertical;"></textarea>
+  <div style="margin-top: 10px;">
+    <button class="btn" onclick="sendText()">✅ Mostra Testo</button>
+    <button class="btn btn-danger" onclick="clearText()">🧽 Pulisci Testo</button>
+  </div>
+</div>
+
+
+            <!-- Sezione Audio -->
+            <div class="section">
+                <h2>🎵 Controllo Audio</h2>
+                <div id="moodGrid" class="mood-grid">
+                    <!-- I mood verranno caricati dinamicamente -->
+                </div>
+                <div>
+                    <button class="btn btn-danger" onclick="stopAudio()">⏹️ Ferma Audio</button>
+                </div>
+            </div>
+
+  <h2>🎵 Audio Custom</h2>
+  <label id="audioDropZone" class="drop-zone" for="audioFileInput">
+    Trascina o clicca per caricare file audio
+    <input type="file" id="audioFileInput" style="display:none;" accept="audio/*">
+  </label>
+</div>
+
+		
+						<div class="section">
+  <h2>🌐 Indirizzo IP del Server</h2>
+  <p>
+    <strong>IP:</strong> <span id="ipAddress">Rilevamento...</span><br>
+    <strong>Frontend:</strong> <span id="frontendUrl">–</span>
+  </p>
+</div>
+
+        <!-- Pannello di Stato -->
+        <div class="status-panel">
+            <h3>📊 Stato Sistema</h3>
+            <div class="status-item">
+                <span>Connessione Frontend</span>
+                <div><span id="connectionStatus">Disconnesso</span><div class="status-indicator inactive" id="connectionIndicator"></div></div>
+            </div>
+            <div class="status-item">
+                <span>Immagine Corrente</span>
+                <span id="currentImage">Nessuna</span>
+            </div>
+            <div class="status-item">
+                <span>Audio Corrente</span>
+                <span id="currentAudio">Nessuno</span>
+            </div>
+        </div>
+    </div>
+
+<button onclick="window.location.href='/shutdown'" class="btn btn-danger">🔻 Chiudi Programma</button>
+
+    <script>
+        // Inizializza Socket.IO
+        // const socket = io();
+        const socket = io(window.location.origin, {
+    transports: ['websocket']
+});
+
+        // Elementi DOM
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const moodGrid = document.getElementById('moodGrid');
+        const previewArea = document.getElementById('previewArea');
+
+        // Gestione connessione WebSocket
+        socket.on('connect', function() {
+            document.getElementById('connectionStatus').textContent = 'Connesso';
+            document.getElementById('connectionIndicator').classList.remove('inactive');
+            console.log('✅ Connesso al server');
+            loadMoods();
+        });
+
+        socket.on('disconnect', function() {
+            document.getElementById('connectionStatus').textContent = 'Disconnesso';
+            document.getElementById('connectionIndicator').classList.add('inactive');
+            console.log('❌ Disconnesso dal server');
+        });
+
+        // Gestione Drag & Drop
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                uploadImage(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                uploadImage(e.target.files[0]);
+            }
+        });
+
+        // Funzioni di upload e controllo
+        function uploadImage(file) {
+            const formData = new FormData();
+            formData.append('image', file);
+
+            // Mostra preview locale
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewArea.innerHTML = `<img src="${e.target.result}" class="preview-image" alt="Preview">`;
+            };
+            reader.readAsDataURL(file);
+
+            fetch('/upload_image', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('✅ Immagine caricata:', data.filename);
+                    document.getElementById('currentImage').textContent = data.filename;
+                } else {
+                    console.error('❌ Errore upload:', data.error);
+                    alert('Errore nel caricamento: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('❌ Errore:', error);
+                alert('Errore nella comunicazione con il server');
+            });
+        }
+
+        function clearScreen() {
+            fetch('/clear_screen')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('✅ Schermo pulito');
+                    document.getElementById('currentImage').textContent = 'Nessuna';
+                    previewArea.innerHTML = '';
+                }
+            });
+        }
+
+        function playMood(mood) {
+            fetch(`/play_mood/${mood}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log(`✅ Riproduzione mood: ${mood} - File: ${data.audio}`);
+                    document.getElementById('currentAudio').textContent = `${mood} (${data.audio})`;
+                } else {
+                    console.error('❌ Errore mood:', data.error);
+                    alert('Errore: ' + data.error);
+                }
+            });
+        }
+
+        function stopAudio() {
+            fetch('/stop_audio')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('✅ Audio fermato');
+                    document.getElementById('currentAudio').textContent = 'Nessuno';
+                }
+            });
+        }
+
+        function loadMoods() {
+            fetch('/get_moods')
+            .then(response => response.json())
+            .then(data => {
+                moodGrid.innerHTML = '';
+                if (data.moods && data.moods.length > 0) {
+                    data.moods.forEach(mood => {
+                        const btn = document.createElement('button');
+                        btn.className = 'mood-btn';
+                        btn.onclick = () => playMood(mood.name);
+                        btn.innerHTML = `
+                            ${mood.name}
+                            <span class="mood-count">${mood.count}</span>
+                        `;
+                        moodGrid.appendChild(btn);
+                    });
+                } else {
+                    moodGrid.innerHTML = '<p style="text-align: center; opacity: 0.7;">Nessun mood audio trovato.<br>Crea cartelle in audio/ con file MP3</p>';
+                }
+            })
+            .catch(error => {
+                console.error('❌ Errore caricamento mood:', error);
+                moodGrid.innerHTML = '<p style="text-align: center; color: #f44336;">Errore nel caricamento dei mood audio</p>';
+            });
+        }
+
+        // Carica lo stato iniziale
+        window.addEventListener('load', () => {
+            loadMoods();
+        });
+		
+		function sendText() {
+  const text = document.getElementById('textInput').value.trim();
+  if (!text) {
+    alert("Inserisci un testo prima di inviarlo.");
+    return;
+  }
+
+  fetch('/show_text', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      console.log('✅ Testo inviato:', data.text);
+    } else {
+      console.error('❌ Errore:', data.error);
+      alert('Errore: ' + data.error);
+    }
+  })
+  .catch(error => {
+    console.error('❌ Errore invio testo:', error);
+    alert('Errore di comunicazione con il server.');
+  });
+}
+
+function clearText() {
+  fetch('/clear_text')
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      console.log('🧽 Testo pulito');
+      document.getElementById('textInput').value = '';
+    }
+  });
+}
+
+// ip address
+
+fetch('/get_ip')
+  .then(res => res.json())
+  .then(data => {
+    const ip = data.ip;
+    document.getElementById('ipAddress').textContent = ip;
+    document.getElementById('frontendUrl').textContent = `http://${ip}:5000/frontend`;
+  })
+  .catch(() => {
+    document.getElementById('ipAddress').textContent = "Errore";
+  });
+
+// PNG portrait
+
+const portraitDropZone = document.getElementById('portraitDropZone');
+const portraitFileInput = document.getElementById('portraitFileInput');
+
+function uploadPortrait(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  fetch('/upload_portrait', {
+    method: 'POST',
+    body: formData
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        console.log(`✅ PNG caricato: ${data.filename}`);
+      } else {
+        alert(data.error || "Errore nel caricamento PNG.");
+      }
+    });
+}
+
+portraitDropZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  portraitDropZone.style.borderColor = '#333';
+});
+
+portraitDropZone.addEventListener('dragleave', () => {
+  portraitDropZone.style.borderColor = '#999';
+});
+
+portraitDropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  portraitDropZone.style.borderColor = '#999';
+
+  const files = e.dataTransfer.files;
+  for (const file of files) {
+    uploadPortrait(file);
+  }
+});
+
+portraitFileInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    uploadPortrait(file);
+  }
+});
+
+// rimuovi PNG
+
+function clearPortraits() {
+  fetch('/clear_portraits')
+    .then(res => res.json())
+    .then(() => {
+      console.log("🧽 PNG pulizia richiesta al server");
+    });
+}
+const audioDropZone = document.getElementById('audioDropZone');
+const audioFileInput = document.getElementById('audioFileInput');
+
+function uploadAudio(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  fetch('/upload_audio', {
+    method: 'POST',
+    body: formData
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        console.log(`✅ Audio caricato: ${data.filename}`);
+      } else {
+        alert(data.error || "Errore nel caricamento audio.");
+      }
+    });
+}
+
+audioDropZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  audioDropZone.style.borderColor = '#333';
+});
+
+audioDropZone.addEventListener('dragleave', () => {
+  audioDropZone.style.borderColor = '#999';
+});
+
+audioDropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  audioDropZone.style.borderColor = '#999';
+
+  const files = e.dataTransfer.files;
+  for (const file of files) {
+    uploadAudio(file);
+  }
+});
+
+audioFileInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    uploadAudio(file);
+  }
+});
+
+function shutdownApp() {
+    if (confirm("Sei sicuro di voler chiudere il programma?")) {
+        fetch('/shutdown', {
+            method: 'POST'
+        }).then(response => {
+            if (response.ok) {
+                alert("Il server è stato chiuso.");
+                window.close();
+            }
+        }).catch(err => {
+            alert("Errore nella chiusura: " + err);
+        });
+    }
+}
+
+    </script>
+	
+<!-- crediti -->	
+	<footer style="text-align: center; padding: 10px; background: #111; color: #ccc; font-size: 0.9em; position: fixed; bottom: 0; width: 100%;">
+  GMProjector &copy; 2025 – realizzato da <strong><a href="mailto:Karoo55@gmail.com">Karoo</a></strong>, da una idea di <strong><a href="mailto:Mpulicati@gmail.com">Marco Pulicati</a></strong>
+</footer>
+
+	
+</body>
+</html>

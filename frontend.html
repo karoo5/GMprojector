@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>GMProjector - Frontend</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: black;
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+    }
+	
+	#imageDisplay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: contain;
+  background-color: black;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+    audio {
+      display: none;
+    }
+    #status {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: white;
+      font-family: monospace;
+      font-size: 12px;
+      background: rgba(0,0,0,0.5);
+      padding: 5px 10px;
+      border-radius: 5px;
+    }
+	
+	#overlayText {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 20px;
+  color: white;
+  background-color: rgba(0,0,0,0.8);
+  font-size: 2rem;
+  text-align: center;
+  font-family: sans-serif;
+  display: none;
+  z-index: 100;
+  
+  }
+  
+#portraitContainer {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  right: 20px;
+  display: flex;
+  flex-wrap: wrap; 
+  gap: 12px;
+  z-index: 200;
+  padding: 10px;
+  max-width: 100%;
+}
+
+#portraitContainer img {
+  width: 150px;
+  height: 150px;
+  object-fit: cover;
+  border: 2px solid white;
+  border-radius: 8px;
+  background: black;
+  box-shadow: 0 0 10px rgba(0,0,0,0.6);
+}
+
+#portraitContainer img {
+  z-index: 999;
+}
+
+
+
+  </style>
+</head>
+<body>
+  <div id="status">🔌 Connessione in corso...</div>
+  <img id="imageDisplay" src="" alt="Display" />
+  <audio id="audioPlayer" preload="auto"></audio>
+  <div id="portraitContainer"></div>
+
+  <div id="overlayText"></div>
+
+
+  <script>
+    const status = document.getElementById('status');
+    const imageDisplay = document.getElementById('imageDisplay');
+    const audioPlayer = document.getElementById('audioPlayer');
+
+    function log(msg) {
+      console.log(msg);
+      status.textContent = msg;
+    }
+
+    const socket = io(window.location.origin, {
+      transports: ['websocket']
+    });
+
+    socket.on('connect', () => {
+      log('✅ Connesso al server');
+    });
+
+    socket.on('disconnect', () => {
+      log('❌ Disconnesso dal server');
+    });
+
+    socket.on('image_update', data => {
+      log(`📸 Ricevuta immagine: ${data.image}`);
+      const url = `/uploads/${data.image}`;
+      const newImg = new Image();
+      newImg.onload = () => {
+        imageDisplay.src = url;
+        imageDisplay.style.opacity = 1;
+        log(`✅ Immagine caricata: ${data.image}`);
+      };
+      newImg.onerror = () => {
+        log(`❌ Errore nel caricamento immagine: ${data.image}`);
+      };
+      newImg.src = url;
+    });
+	
+	const portraitContainer = document.getElementById('portraitContainer');
+
+socket.on('add_portrait', data => {
+  const portrait = document.createElement('img');
+  portrait.src = `/uploads/${data.image}`;
+  portrait.alt = data.image;
+  portraitContainer.appendChild(portrait);
+  log(`🧑 PNG mostrato: ${data.image}`);
+});
+
+socket.on('clear_portraits', () => {
+  console.log('🧽 Evento clear_portraits ricevuto');
+  portraitContainer.innerHTML = '';
+  log('🧽 PNG rimossi');
+});
+
+    socket.on('clear_screen', () => {
+      log('🗑️ Pulizia schermo');
+      imageDisplay.style.opacity = 0;
+      setTimeout(() => {
+      imageDisplay.src = '';
+      }, 500);
+    });
+
+socket.on('play_audio', data => {
+  let audioPath;
+
+  if (data.mood === 'custom') {
+    // File audio caricato dinamicamente → in /uploads/
+    audioPath = `/uploads/${data.audio}`;
+  } else {
+    // Audio predefinito → in /audio/<mood>/<filename>
+    audioPath = `/audio/${data.mood}/${data.audio}`;
+  }
+
+  log(`🎵 Riproduzione audio: ${audioPath}`);
+  audioPlayer.src = audioPath;
+  audioPlayer.play().catch(err => {
+    log(`❌ Errore audio: ${err.message}`);
+  });
+});
+
+
+
+    socket.on('stop_audio', () => {
+      log('⏹️ Audio fermato');
+      audioPlayer.pause();
+      audioPlayer.currentTime = 0;
+    });
+
+    audioPlayer.addEventListener('ended', () => {
+      log('🎵 Audio terminato');
+    });
+
+    audioPlayer.addEventListener('error', e => {
+      log('❌ Errore audio player');
+    });
+	
+	const overlayText = document.getElementById('overlayText');
+
+	socket.on('show_text', data => {
+	overlayText.textContent = data.text;
+	overlayText.style.display = 'block';
+	log(`📝 Testo mostrato: ${data.text}`);
+	});
+
+	socket.on('clear_text', () => {
+	overlayText.textContent = '';
+	overlayText.style.display = 'none';
+	log('🧽 Testo nascosto');
+	});
+
+	socket.on('shutdown', () => {
+    console.log("🔌 Disconnessione richiesta dal server");
+    socket.disconnect();
+	});
+
+
+  </script>
+</body>
+</html>
