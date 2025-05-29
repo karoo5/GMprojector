@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GMProjector - Control Panel</title>
+	<script src="/static/lib/socket.io.min.js"></script>
+    <link id="themeStylesheet" rel="stylesheet" href="/static/css/style-default.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎲 GMProjector</h1>
+            <p>Control Panel - Trascina, clicca e controlla la tua sessione</p>
+        </div>
+        
+        <div style="text-align: right; margin-bottom: 20px;">
+            <label for="themeSelector">🎨 Tema:</label>
+            <select id="themeSelector" onchange="changeTheme(this.value)">
+                <option value="default">Default</option>
+                <option value="forest">Forest</option>
+                <option value="magma">Magma</option>
+                <option value="deep_ocean">Deep Ocean</option>
+                <option value="clear_sky">Clear Sky</option>
+                <option value="mountain">Mountain</option>
+                <option value="ice">Ice Sea</option>
+            </select>
+        </div>
+
+        <div class="control-panel">
+            <div class="section">
+                <h2>📸 Inserisci Immagini</h2>
+                <div class="drop-zone" id="dropZone">
+                    <div>📁</div>
+                    <p><strong>Trascina un'immagine qui</strong></p>
+                    <p>oppure clicca per selezionare</p>
+                    <small>(PNG, JPG, GIF, WebP supportati)</small>
+                </div>
+                <input type="file" id="fileInput" class="file-input" accept="image/*">
+                <div>
+                    <button class="btn btn-danger" onclick="clearScreen()">🗑️ Pulisci Schermo</button>
+                </div>
+                <div class="preview-area" id="previewArea"></div>
+            </div>
+
+            <div class="section">
+                <h2>🧑 Inserisci PNG</h2>
+                <label id="portraitDropZone" class="drop-zone" for="portraitFileInput">
+                    Clicca o trascina qui il ritratto PNG
+                    <input type="file" id="portraitFileInput" style="display:none;" accept="image/png,image/jpeg">
+                </label>
+                <button class="btn btn-danger" onclick="fetch('/clear_last_portrait')">Rimuovi portrait</button>
+            </div>
+
+            <div class="section">
+                <h2>🎵 Audio Custom</h2>
+                <br>
+                <label id="audioDropZone" class="drop-zone" for="audioFileInput">
+                    Trascina o clicca per caricare file audio
+                    <input type="file" id="audioFileInput" style="display:none;" accept="audio/*">
+                </label>
+            </div>
+
+            <div class="section">
+                <h2>🎵 Controllo Audio</h2>
+                <div id="moodGrid" class="mood-grid"></div>
+                <div>
+                    <button class="btn btn-danger" onclick="stopAudio()">⏹️ Ferma Audio</button>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>📝 Mostra Testo</h2>
+                <textarea id="textInput" rows="4" placeholder="Inserisci il testo da mostrare..." style="width: 100%; padding: 10px; border-radius: 8px; resize: vertical;"></textarea>
+                <div style="margin-top: 10px;">
+                    <button class="btn" onclick="sendText()">✅ Mostra Testo</button>
+                    <button class="btn btn-danger" onclick="clearText()">🧽 Pulisci Testo</button>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>Disegno libero</h2>
+                <div id="canvasWrapper" style="display: block;">
+                    <canvas id="gmCanvas" width="600" height="400" style="border:1px solid #ccc;"></canvas>
+                    <div style="margin-top:10px;">
+                        <button class="btn btn-danger" onclick="clearDrawing()">Pulisci</button>
+                        <button class="btn" onclick="sendCanvas()">Mostra ai giocatori</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="diceButtons">
+                <button class="btn" onclick="rollDice('d4')">🎲 d4</button>
+                <button class="btn" onclick="rollDice('d6')">🎲 d6</button>
+                <button class="btn" onclick="rollDice('d8')">🎲 d8</button>
+                <button class="btn" onclick="rollDice('d10')">🎲 d10</button>
+                <button class="btn" onclick="rollDice('d12')">🎲 d12</button>
+                <button class="btn" onclick="rollDice('d20')">🎲 d20</button>
+                <button class="btn btn-danger" onclick="clearDice()">🧹 Pulisci dadi</button>
+            </div>
+
+            <div class="section">
+                <h2>🌐 Indirizzo IP del Server</h2>
+                <p>
+                    <strong>IP:</strong> <span id="ipAddress">Rilevamento...</span><br>
+                    <strong>Frontend:</strong> <span id="frontendUrl">–</span>
+                </p>
+            </div>
+
+            <div class="status-panel">
+                <h3>📊 Stato Sistema</h3>
+                <div class="status-item">
+                    <span>Connessione Frontend</span>
+                    <div><span id="connectionStatus">Disconnesso</span><div class="status-indicator inactive" id="connectionIndicator"></div></div>
+                </div>
+                <div class="status-item">
+                    <span>Immagine Corrente</span>
+                    <span id="currentImage">Nessuna</span>
+                </div>
+                <div class="status-item">
+                    <span>Audio Corrente</span>
+                    <span id="currentAudio">Nessuno</span>
+                </div>
+            </div>
+        </div>
+
+        <button onclick="window.location.href='/shutdown'" class="btn btn-danger">🔻 Chiudi Programma</button>
+    </div>
+
+    <script>
+        function changeTheme(themeName) {
+            const link = document.getElementById('themeStylesheet');
+            link.href = `/static/css/style-${themeName}.css`;
+        }
+        
+        const socket = io(window.location.origin, {
+            transports: ['websocket']
+        });
+
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const moodGrid = document.getElementById('moodGrid');
+        const previewArea = document.getElementById('previewArea');
+
+        socket.on('connect', function() {
+            document.getElementById('connectionStatus').textContent = 'Connesso';
+            document.getElementById('connectionIndicator').classList.remove('inactive');
+            loadMoods();
+        });
+
+        socket.on('disconnect', function() {
+            document.getElementById('connectionStatus').textContent = 'Disconnesso';
+            document.getElementById('connectionIndicator').classList.add('inactive');
+        });
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                uploadImage(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                uploadImage(e.target.files[0]);
+            }
+        });
+
+        function uploadImage(file) {
+            const formData = new FormData();
+            formData.append('image', file);
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewArea.innerHTML = `<img src="${e.target.result}" class="preview-image" alt="Preview">`;
+            };
+            reader.readAsDataURL(file);
+
+            fetch('/upload_image', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('currentImage').textContent = data.filename;
+                } else {
+                    alert('Errore nel caricamento: ' + data.error);
+                }
+            })
+            .catch(error => {
+                alert('Errore nella comunicazione con il server');
+            });
+        }
+
+        function clearScreen() {
+            fetch('/clear_screen')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('currentImage').textContent = 'Nessuna';
+                    previewArea.innerHTML = '';
+                }
+            });
+        }
+
+        function playMood(mood) {
+            fetch(`/play_mood/${mood}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('currentAudio').textContent = `${mood} (${data.audio})`;
+                } else {
+                    alert('Errore: ' + data.error);
+                }
+            });
+        }
+
+        function stopAudio() {
+            fetch('/stop_audio')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('currentAudio').textContent = 'Nessuno';
+                }
+            });
+        }
+
+        function loadMoods() {
+            fetch('/get_moods')
+            .then(response => response.json())
+            .then(data => {
+                moodGrid.innerHTML = '';
+                if (data.moods && data.moods.length > 0) {
+                    data.moods.forEach(mood => {
+                        const btn = document.createElement('button');
+                        btn.className = 'mood-btn';
+                        btn.onclick = () => playMood(mood.name);
+                        btn.innerHTML = `
+                            ${mood.name}
+                            <span class="mood-count">${mood.count}</span>
+                        `;
+                        moodGrid.appendChild(btn);
+                    });
+                } else {
+                    moodGrid.innerHTML = '<p style="text-align: center; opacity: 0.7;">Nessun mood audio trovato.<br>Crea cartelle in audio/ con file MP3</p>';
+                }
+            })
+            .catch(error => {
+                moodGrid.innerHTML = '<p style="text-align: center; color: #f44336;">Errore nel caricamento dei mood audio</p>';
+            });
+        }
+
+        window.addEventListener('load', () => {
+            loadMoods();
+        });
+        
+        function sendText() {
+            const text = document.getElementById('textInput').value.trim();
+            if (!text) {
+                alert("Inserisci un testo prima di inviarlo.");
+                return;
+            }
+
+            fetch('/show_text', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    alert('Errore: ' + data.error);
+                }
+            })
+            .catch(error => {
+                alert('Errore di comunicazione con il server.');
+            });
+        }
+
+        function clearText() {
+            fetch('/clear_text')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('textInput').value = '';
+                }
+            });
+        }
+
+        fetch('/get_ip')
+        .then(res => res.json())
+        .then(data => {
+            const ip = data.ip;
+            document.getElementById('ipAddress').textContent = ip;
+            document.getElementById('frontendUrl').textContent = `http://${ip}:5000/frontend`;
+        })
+        .catch(() => {
+            document.getElementById('ipAddress').textContent = "Errore";
+        });
+
+        const portraitDropZone = document.getElementById('portraitDropZone');
+        const portraitFileInput = document.getElementById('portraitFileInput');
+
+        function uploadPortrait(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            fetch('/upload_portrait', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) {
+                    alert(data.error || "Errore nel caricamento PNG.");
+                }
+            });
+        }
+
+        portraitDropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            portraitDropZone.style.borderColor = '#333';
+        });
+
+        portraitDropZone.addEventListener('dragleave', () => {
+            portraitDropZone.style.borderColor = '#999';
+        });
+
+        portraitDropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            portraitDropZone.style.borderColor = '#999';
+            const files = e.dataTransfer.files;
+            for (const file of files) {
+                uploadPortrait(file);
+            }
+        });
+
+        portraitFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                uploadPortrait(file);
+            }
+        });
+
+        const audioDropZone = document.getElementById('audioDropZone');
+        const audioFileInput = document.getElementById('audioFileInput');
+
+        function uploadAudio(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            fetch('/upload_audio', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) {
+                    alert(data.error || "Errore nel caricamento audio.");
+                }
+            });
+        }
+
+        audioDropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            audioDropZone.style.borderColor = '#333';
+        });
+
+        audioDropZone.addEventListener('dragleave', () => {
+            audioDropZone.style.borderColor = '#999';
+        });
+
+        audioDropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            audioDropZone.style.borderColor = '#999';
+            const files = e.dataTransfer.files;
+            for (const file of files) {
+                uploadAudio(file);
+            }
+        });
+
+        audioFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                uploadAudio(file);
+            }
+        });
+
+        function rollDice(type) {
+            fetch(`/roll_dice/${type}`)
+            .then(res => res.json())
+            .then(data => console.log(`🎲 Lanciato ${type}:`, data.result));
+        }
+
+        function clearDice() {
+            fetch('/clear_dice')
+            .then(res => res.json())
+            .then(data => console.log("🧽 Dadi puliti"));
+        }
+    </script>
+
+    <script>
+        const canvasWrapper = document.getElementById('canvasWrapper');
+        const canvas = document.getElementById('gmCanvas');
+        const ctx = canvas.getContext('2d');
+        let drawing = false;
+
+        canvas.addEventListener('mousedown', (e) => {
+            canvasWrapper.style.display = 'block';
+            drawing = true;
+            const rect = canvas.getBoundingClientRect();
+            ctx.beginPath();
+            ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            drawing = false;
+            ctx.beginPath();
+        });
+
+        canvas.addEventListener('mouseout', () => {
+            drawing = false;
+            ctx.beginPath();
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!drawing) return;
+            const rect = canvas.getBoundingClientRect();
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = '#FFD700';
+            ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+        });
+
+        function clearDrawing() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            fetch('/clear_drawing');
+            fetch('/hide_canvas');
+        }
+
+		function sendCanvas() {
+		// Imposta sfondo nero prima di salvare
+		const tempCanvas = document.createElement('canvas');
+		const tempCtx = tempCanvas.getContext('2d');
+			tempCanvas.width = canvas.width;
+			tempCanvas.height = canvas.height;
+
+		// Sfondo nero
+			tempCtx.fillStyle = 'black';
+			tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+
+		// Disegno originale
+			tempCtx.drawImage(canvas, 0, 0);
+
+		const dataURL = tempCanvas.toDataURL();
+
+	fetch('/send_canvas', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ image: dataURL })
+		}).then(r => r.json()).then(res => {
+    if (res.success) {
+      console.log("✅ Canvas inviato");
+    }
+	});
+}
+
+    </script>
+
+    <footer style="text-align: center; padding: 5px 0; background: rgba(0, 0, 0, 0.3); color: #aaa; font-size: 0.75em; margin-top: 20px;">
+        GMProjector &copy; 2025 – realizzato da <strong><a href="mailto:Karoo55@gmail.com">Karoo</a></strong>, da una idea di <strong><a href="mailto:Mpulicati@gmail.com">Marco Pulicati</a></strong>
+    </footer>
+</body>
+</html>

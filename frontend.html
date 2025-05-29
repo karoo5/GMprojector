@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>GMProjector - Frontend</title>
+
+    <!-- Socket.IO per comunicazione WebSocket -->
+    <script src="/static/lib/socket.io.min.js"></script>
+
+    <!-- Stili CSS principali -->
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            background-color: black;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        #imageDisplay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            object-fit: contain;
+            background-color: black;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        audio {
+            display: none;
+        }
+
+        #status {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-family: monospace;
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+
+        #overlayText {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 20px;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.8);
+            font-size: 2rem;
+            text-align: center;
+            font-family: sans-serif;
+            display: none;
+            z-index: 100;
+        }
+
+        #portraitsContainer {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .portrait {
+            width: 100px;
+            max-height: 150px;
+            border: 2px solid #FFD700;
+            border-radius: 8px;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 4px;
+            box-shadow: 0 0 10px #000;
+            object-fit: contain;
+        }
+
+        #gmDrawing {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            max-width: 400px;
+            border: 2px solid white;
+            display: none;
+        }
+
+        #diceResultsContainer {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            z-index: 2000;
+        }
+
+        .diceResult {
+            position: relative;
+            width: 40px;
+            height: 40px;
+        }
+
+        .diceResult img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .diceResult .diceNumber {
+            position: absolute;
+            top: 90%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.6);
+            color: #FFD700;
+            font-weight: bold;
+            font-size: 1.4em;
+            padding: 2px 6px;
+            border-radius: 8px;
+        }
+    </style>
+
+    <!-- Suono per il lancio dei dadi -->
+    <audio id="diceSound" src="/static/audio/dice_roll.mp3" preload="auto"></audio>
+</head>
+<body>
+    <div id="status">🔌 Connessione in corso...</div>
+	<!-- logo di default -->
+	<img id="idleLogo" src="/static/img/logo.png" alt="GMProjector Logo"
+     style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+     max-width: 50vw; max-height: 50vh; opacity: 1; transition: opacity 0.5s;">
+    <!-- altri elementi -->
+	<img id="imageDisplay" src="" alt="Display" />
+    <audio id="audioPlayer" preload="auto"></audio>
+    <div id="portraitsContainer"></div>
+    <img id="gmDrawing" />
+    <div id="diceResultsContainer"></div>
+    <div id="overlayText"></div>
+
+    <script>
+        const socket = io(window.location.origin, {
+            transports: ['websocket']
+        });
+
+        const status = document.getElementById('status');
+        const imageDisplay = document.getElementById('imageDisplay');
+        const audioPlayer = document.getElementById('audioPlayer');
+        const overlayText = document.getElementById('overlayText');
+        const portraitsContainer = document.getElementById('portraitsContainer');
+        const gmDrawing = document.getElementById('gmDrawing');
+        const diceContainer = document.getElementById('diceResultsContainer');
+        const diceSound = document.getElementById('diceSound');
+
+        const portraitStack = [];
+
+        // Log di stato
+        function log(msg) {
+            console.log(msg);
+            status.textContent = msg;
+        }
+
+        // Sblocco audio su prima interazione
+        document.addEventListener('click', () => {
+            diceSound.play().catch(() => {});
+        });
+
+        // Connessione al server
+        socket.on('connect', () => log('✅ Connesso al server'));
+        socket.on('disconnect', () => log('❌ Disconnesso dal server'));
+
+        // Mostra immagine principale
+        const idleLogo = document.getElementById('idleLogo');
+
+		socket.on('image_update', data => {
+			log(`📸 Ricevuta immagine: ${data.image}`);
+		const url = `/uploads/${data.image}`;
+		const newImg = new Image();
+			newImg.onload = () => {
+			imageDisplay.src = url;
+			imageDisplay.style.opacity = 1;
+			idleLogo.style.opacity = 0; // 🔽 Nascondi il logo
+			log(`✅ Immagine caricata: ${data.image}`);
+			};
+			newImg.onerror = () => {
+			log(`❌ Errore nel caricamento immagine: ${data.image}`);
+			};
+			newImg.src = url;
+		});
+
+
+        // Aggiunta di un ritratto
+        socket.on('add_portrait', data => {
+            const img = document.createElement('img');
+            img.src = `/uploads/${data.image}`;
+            img.className = 'portrait';
+            portraitsContainer.appendChild(img);
+            portraitStack.push(img);
+        });
+
+        // Rimozione ultimo ritratto
+        socket.on('clear_last_portrait', () => {
+            const last = portraitStack.pop();
+            if (last) last.remove();
+        });
+
+        // Pulizia schermo
+		socket.on('clear_screen', () => {
+			log('🗑️ Pulizia schermo');
+			imageDisplay.style.opacity = 0;
+			idleLogo.style.opacity = 1;  // 🔼 Mostra il logo
+			setTimeout(() => {
+			imageDisplay.src = '';
+			}, 500);
+		});
+
+        // Riproduzione audio
+        socket.on('play_audio', data => {
+            const audioPath = data.mood === 'custom'
+                ? `/uploads/${data.audio}`
+                : `/audio/${data.mood}/${data.audio}`;
+
+            audioPlayer.src = audioPath;
+            audioPlayer.play().catch(err => {
+                log(`❌ Errore audio: ${err.message}`);
+            });
+        });
+
+        // Mostra disegno del GM
+        socket.on('canvas_update', data => {
+            gmDrawing.src = data.image;
+            gmDrawing.style.display = 'block';
+        });
+
+        // Nasconde disegno del GM
+        socket.on('hide_canvas', () => {
+            gmDrawing.src = '';
+            gmDrawing.style.display = 'none';
+        });
+
+        // Ferma riproduzione audio
+        socket.on('stop_audio', () => {
+            audioPlayer.pause();
+            audioPlayer.currentTime = 0;
+        });
+
+        // Mostra testo in sovrimpressione
+        socket.on('show_text', data => {
+            overlayText.textContent = data.text;
+            overlayText.style.display = 'block';
+        });
+
+        // Nasconde testo in sovrimpressione
+        socket.on('clear_text', () => {
+            overlayText.textContent = '';
+            overlayText.style.display = 'none';
+        });
+
+        // Disconnessione forzata
+        socket.on('shutdown', () => {
+            socket.disconnect();
+        });
+
+        // Mostra dado tirato con risultato
+        socket.on("show_dice", data => {
+            const div = document.createElement("div");
+            div.className = "diceResult";
+
+            const img = document.createElement("img");
+            img.src = `/static/img/dice/${data.die}.png`;
+
+            const num = document.createElement("div");
+            num.className = "diceNumber";
+            num.textContent = data.result;
+
+            div.appendChild(img);
+            div.appendChild(num);
+            diceContainer.appendChild(div);
+
+            // Riproduce il suono del dado
+            diceSound.currentTime = 0;
+            diceSound.play().catch(err => console.warn("Errore audio:", err));
+        });
+
+        // Cancella tutti i dadi mostrati
+        socket.on("clear_dice", () => {
+            diceContainer.innerHTML = "";
+        });
+    </script>
+</body>
+</html>
