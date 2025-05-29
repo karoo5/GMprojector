@@ -17,6 +17,12 @@ GMProjector è un'applicazione standalone per Windows pensata per master di gioc
 
     Usare una doppia interfaccia: backend (per il master), frontend (per i giocatori)
 
+Dove si scarica?
+
+Puoi fare il DOWNLOAD dell'ultima release direttamente qui:
+
+https://github.com/karoo5/GMprojector/releases/download/v1.0.0/GMProjector.exe
+
 ⚙️ Come funziona
 
 Quando avvii l’eseguibile gmprojector.exe, si apre il backend nel browser predefinito (http://localhost:5000).
