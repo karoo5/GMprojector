@@ -3,7 +3,7 @@
     Un proiettore da tavolo per il Game Master!
     Mostra immagini e riproduci musica direttamente da un'interfaccia di controllo (backend), trasmettendo in tempo reale a un frontend visibile ai giocatori.
 
-📸 Cos'è GMProjector?
+Cos'è GMProjector?
 
 GMProjector è un'applicazione standalone per Windows pensata per master di giochi di ruolo o narratori. Permette di:
 
@@ -23,7 +23,7 @@ Puoi fare il DOWNLOAD dell'ultima release direttamente qui:
 
 https://github.com/karoo5/GMprojector/releases/download/v1.0.0/GMProjector.exe
 
-⚙️ Come funziona
+Come funziona
 
 Quando avvii l’eseguibile gmprojector.exe, si apre il backend nel browser predefinito (http://localhost:5000).
 
@@ -55,10 +55,10 @@ Esempio:
 
 audio/
 ├── tension/
-│   ├── dark-ambience.mp3
-│   └── heartbeat.wav
+│   ├── tension1.mp3
+│   └── tension2.wav
 ├── calm/
-│   └── forest.mp3
+│   └── calm1.mp3
 
     Durante l’uso, verrà scelto randomicamente un file audio tra quelli della cartella selezionata.
 
@@ -72,7 +72,7 @@ Contiene:
 
     I file audio personalizzati trascinati nell'interfaccia
 
-🖥️ Modalità d'uso
+Modalità d'uso
 
     Avvia gmprojector.exe
 
@@ -82,7 +82,7 @@ Contiene:
 
     Usa i pulsanti del backend per controllare cosa vedranno i giocatori
 
-💡 Suggerimenti
+Suggerimenti
 
     Puoi caricare anche immagini animate .gif
 
@@ -90,7 +90,7 @@ Contiene:
 
     I file presenti in audio/ vengono inclusi nella versione eseguibile (se compili tu) oppure estratti automaticamente se lanci il programma
 
-🔧 Requisiti (solo per chi vuole modificarlo)
+Requisiti (solo per chi vuole modificarlo)
 
     Python 3.10+ (consigliato non installarlo da Microsoft Store)
 
@@ -102,13 +102,20 @@ Contiene:
 
     PyInstaller (per creare l'eseguibile standalone)
 
-🛠️ Compilazione in .exe
+static/
+├── /lib
+├── /img
+    └── dice
+├── /audio
+├── /css
+
+Compilazione in .exe
 
     Non necessaria se usi il programma già pronto!
     Se vuoi compilarlo da solo, è stato progettato per funzionare con PyInstaller in modalità --onedir.
     I file backend.html e frontend.html vanno inseriti in una cartella chiamata Templates
 
-📜 Licenza & Credits
+Licenza & Credits
 
 Questo progetto è distribuito gratuitamente.
 Chiunque può:
@@ -124,5 +131,5 @@ Chiunque può:
 Autore: [W. Bersani]
 
 Icona: generata con risorse open source.
-Musiche: fornire proprie tracce royalty-free.
+Musiche: fornire proprie tracce royalty-free. Vi chiedo scusa ma le ho scaricate casualmente e non ho riportato gli autori. Se riconoscete una vostra musica per favore scrivetemi.
 Progetto creato con ❤️ per la comunità dei giocatori di ruolo.
