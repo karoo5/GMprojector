@@ -1,0 +1,63 @@
+Come si usa GMProjector
+
+1. Avvia l’applicazione
+
+    Fai doppio clic su GMProjector.exe
+
+    Si aprono due finestre nel browser:
+
+        Backend → il pannello di controllo del Game Master (si apre da solo all'avvio)
+
+        Frontend → la proiezione da mostrare ai giocatori (va aperto su un altro device. l'indirizzo è specificato all'interno del Backend)
+
+2. Usa il Backend (pannello GM)
+
+Da qui puoi:
+
+    Caricare immagini da mostrare
+
+    Riprodurre suoni e musiche (organizzati per “mood”)
+
+    Mostrare ritratti PNG (che si accostano sullo schermo)
+
+    Scrivere testo in sovrimpressione
+
+    Disegnare a mano libera su una porzione di schermo o sull’intero schermo
+
+    Tirare dadi (d4, d6, d8, d10, d12, d20) e mostrarne il risultato in 2D con suono
+
+3. Usa il Frontend (schermo di gioco)
+
+Questa finestra va:
+
+    Proiettata a schermo intero oppure condivisa (es. su Zoom/Discord)
+
+    Mostrata ai giocatori: mostra in tempo reale tutto ciò che fai nel backend
+
+Altri comandi utili
+
+    Pulisci schermo → cancella tutto: immagini, testo, disegni e dadi
+
+    Pulisci disegni → cancella solo i disegni
+
+    Rimuovi ritratti → rimuove i PNG uno alla volta (partendo dall’ultimo)
+
+    Chiudi → chiude tutto (anche le finestre del browser)
+
+Dove mettere file personalizzati
+
+    Le immagini vanno in uploads/
+
+    Gli audio personalizzati anche in uploads/
+
+    Gli audio predefiniti sono in audio/<mood>/
+
+    I temi grafici si possono cambiare dal menu a tendina (Forest, Ocean, Magma…)
+
+Consigli finali
+
+    Usa due schermi se puoi: uno per controllare, l’altro per i giocatori
+
+    Puoi usare tablet o touch screen per disegnare direttamente
+
+    Funziona anche senza internet, tutto è incluso nel programma
