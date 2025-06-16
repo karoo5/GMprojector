@@ -26,8 +26,8 @@
                 <option value="ice">Ice Sea</option>
             </select>
         </div>
-
-        <div class="control-panel">
+		
+		<div class="control-panel">
             <div class="section">
                 <h2>📸 Inserisci Immagini</h2>
                 <div class="drop-zone" id="dropZone">
@@ -98,39 +98,52 @@
                 <button class="btn" onclick="rollDice('d20')">🎲 d20</button>
                 <button class="btn btn-danger" onclick="clearDice()">🧹 Pulisci dadi</button>
             </div>
+			
+			<button class="btn" onclick="openSoundbar()">🔊 Soundbar</button>
+			<script>
+			function openSoundbar() {
+			  const theme = localStorage.getItem('selectedTheme') || 'default';
+			  window.open(
+				"/soundbar",
+				"SoundbarWindow",
+				"width=800,height=600,resizable=yes,scrollbars=no"
+			  );
+			}
+			</script>
 
-            <div class="section">
-                <h2>🌐 Indirizzo IP del Server</h2>
-                <p>
-                    <strong>IP:</strong> <span id="ipAddress">Rilevamento...</span><br>
-                    <strong>Frontend:</strong> <span id="frontendUrl">–</span>
-                </p>
-            </div>
 
-            <div class="status-panel">
-                <h3>📊 Stato Sistema</h3>
-                <div class="status-item">
-                    <span>Connessione Frontend</span>
-                    <div><span id="connectionStatus">Disconnesso</span><div class="status-indicator inactive" id="connectionIndicator"></div></div>
-                </div>
-                <div class="status-item">
-                    <span>Immagine Corrente</span>
-                    <span id="currentImage">Nessuna</span>
-                </div>
-                <div class="status-item">
-                    <span>Audio Corrente</span>
-                    <span id="currentAudio">Nessuno</span>
-                </div>
-            </div>
-        </div>
 
-        <button onclick="window.location.href='/shutdown'" class="btn btn-danger">🔻 Chiudi Programma</button>
-    </div>
+
+<div class="status-panel">
+  <h3>📊 Stato Sistema</h3>
+    <div class="status-item">
+    <p><strong>IP locale:</strong> <span id="ipAddress">Rilevamento...</span></p>
+    <p><strong>Frontend:</strong> <a href="#" id="frontendUrl" target="_blank">–</a></p>
+  </div>
+  <div class="status-item">
+    <span>Connessione Frontend</span>
+    <div><span id="connectionStatus">Disconnesso</span><div class="status-indicator inactive" id="connectionIndicator"></div></div>
+  </div>
+  <div class="status-item">
+    <span>Immagine Corrente</span>
+    <span id="currentImage">Nessuna</span>
+  </div>
+  <div class="status-item">
+    <span>Audio Corrente</span>
+    <span id="currentAudio">Nessuno</span>
+  </div>
+</div>
+
+<button class="btn btn-danger" onclick="shutdownApp()">🚫 Chiudi Programma</button>
+
+</div>
 
     <script>
         function changeTheme(themeName) {
             const link = document.getElementById('themeStylesheet');
             link.href = `/static/css/style-${themeName}.css`;
+			localStorage.setItem('selectedTheme', themeName);
+			window.dispatchEvent(new Event("storage"));
         }
         
         const socket = io(window.location.origin, {
@@ -301,16 +314,22 @@
             });
         }
 
-        fetch('/get_ip')
-        .then(res => res.json())
-        .then(data => {
-            const ip = data.ip;
-            document.getElementById('ipAddress').textContent = ip;
-            document.getElementById('frontendUrl').textContent = `http://${ip}:5000/frontend`;
-        })
-        .catch(() => {
-            document.getElementById('ipAddress').textContent = "Errore";
-        });
+
+		fetch('/get_ip')
+		  .then(res => res.json())
+		  .then(data => {
+			const ip = data.ip;
+			document.getElementById('ipAddress').textContent = ip;
+			const link = `http://${ip}:5000/frontend`;
+			const frontendLink = document.getElementById('frontendUrl');
+			frontendLink.href = link;
+			frontendLink.textContent = link;
+		  })
+		  .catch(() => {
+			document.getElementById('ipAddress').textContent = "Errore";
+			document.getElementById('frontendUrl').textContent = "N/D";
+		  });
+
 
         const portraitDropZone = document.getElementById('portraitDropZone');
         const portraitFileInput = document.getElementById('portraitFileInput');
@@ -481,6 +500,13 @@
     }
 	});
 }
+
+	function shutdownApp() {
+	  if (confirm("Chiudere davvero il programma?")) {
+		fetch('/shutdown', { method: 'POST' });
+		window.close(); // Chiude la scheda
+	  }
+	}
 
     </script>
 

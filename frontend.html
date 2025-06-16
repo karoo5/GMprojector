@@ -138,6 +138,7 @@
     <!-- altri elementi -->
 	<img id="imageDisplay" src="" alt="Display" />
     <audio id="audioPlayer" preload="auto"></audio>
+	<audio id="sfxPlayer" preload="auto"></audio>
     <div id="portraitsContainer"></div>
     <img id="gmDrawing" />
     <div id="diceResultsContainer"></div>
@@ -220,16 +221,21 @@
 		});
 
         // Riproduzione audio
-        socket.on('play_audio', data => {
-            const audioPath = data.mood === 'custom'
-                ? `/uploads/${data.audio}`
-                : `/audio/${data.mood}/${data.audio}`;
+		socket.on('play_audio', data => {
+		  let audioPath;
 
-            audioPlayer.src = audioPath;
-            audioPlayer.play().catch(err => {
-                log(`❌ Errore audio: ${err.message}`);
-            });
-        });
+		  if (data.mood === 'custom') {
+			audioPath = `/uploads/${data.audio}`;
+		  } else {
+			audioPath = `/audio/${data.mood}/${data.audio}`;
+		  }
+
+		  audioPlayer.src = audioPath;
+		  audioPlayer.play().catch(err => {
+			log(`❌ Errore audio: ${err.message}`);
+		  });
+		});
+
 
         // Mostra disegno del GM
         socket.on('canvas_update', data => {

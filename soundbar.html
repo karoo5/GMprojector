@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+  <meta charset="UTF-8">
+  <title>GMProjector - Soundbar</title>
+
+  <!-- Tema CSS dinamico -->
+  <link id="themeStylesheet" rel="stylesheet" href="">
+
+  <script>
+    // Funzione per ottenere parametri da URL
+    function getQueryParam(key) {
+      const params = new URLSearchParams(window.location.search);
+      return params.get(key);
+    }
+
+    // Applica il tema in base a URL o localStorage
+    const urlTheme = getQueryParam('theme');
+    const savedTheme = urlTheme || localStorage.getItem('selectedTheme') || 'default';
+
+    window.addEventListener("DOMContentLoaded", () => {
+      const themeLink = document.getElementById('themeStylesheet');
+      themeLink.href = `/static/css/style-${savedTheme}.css`;
+    });
+
+    // Rileva aggiornamenti di tema
+    window.addEventListener("storage", () => {
+      const newTheme = localStorage.getItem("selectedTheme") || "default";
+      document.getElementById("themeStylesheet").href = `/static/css/style-${newTheme}.css`;
+    });
+  </script>
+
+  <!-- Socket.IO -->
+  <script src="/static/lib/socket.io.min.js"></script>
+
+  <style>
+    body {
+      font-family: sans-serif;
+      background-color: #111;
+      color: #fff;
+      margin: 20px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: auto;
+    }
+
+    .btn {
+      padding: 10px 15px;
+      margin: 5px;
+      background-color: #444;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .btn:hover {
+      background-color: #666;
+    }
+
+    .btn-danger {
+      background-color: darkred;
+    }
+
+    .loop-toggle {
+      display: block;
+      margin: 10px 0;
+    }
+
+    .sfx-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>🎧 Soundbar GMProjector</h1>
+
+    <label class="loop-toggle">
+      <input type="checkbox" id="loopToggle"> 🔁 Riproduzione in loop
+    </label>
+
+    <div id="sfxButtons" class="sfx-grid">
+      <!-- Pulsanti audio -->
+    </div>
+	
+	<button class="btn btn-warning" onclick="stopSfx()">⏹️ Ferma Audio</button>
+
+    <button class="btn btn-danger" onclick="window.close()">⬅️ Chiudi</button>
+
+    <!-- 🎧 Player dedicato agli effetti sonori -->
+    <audio id="sfxPlayer" preload="auto"></audio>
+  </div>
+
+  <script>
+    window.onload = () => {
+      const loopToggle = document.getElementById('loopToggle');
+      const sfxButtons = document.getElementById('sfxButtons');
+      const sfxPlayer = document.getElementById('sfxPlayer');
+      const socket = io();
+
+      let loopEnabled = false;
+
+      loopToggle.addEventListener('change', () => {
+        loopEnabled = loopToggle.checked;
+      });
+
+      // Genera i pulsanti per i suoni disponibili
+      fetch("/get_sfx_list")
+        .then(res => res.json())
+        .then(data => {
+          data.sounds.forEach(sound => {
+            const btn = document.createElement("button");
+            btn.className = "btn";
+            btn.textContent = sound;
+            btn.onclick = () => {
+              fetch(`/play_sfx_soundbar/${sound}?loop=${loopEnabled}`);
+            };
+            sfxButtons.appendChild(btn);
+          });
+        });
+
+      // Riceve il comando dal backend (se usato anche per socket-based triggers)
+      socket.on("play_sfx", data => {
+        sfxPlayer.src = data.path;
+        sfxPlayer.loop = data.loop;
+        sfxPlayer.currentTime = 0;
+        sfxPlayer.play().catch(err => console.warn("Errore SFX:", err));
+      });
+    };
+	
+	function stopSfx() {
+	const sfxPlayer = document.getElementById('sfxPlayer');
+	sfxPlayer.pause();
+	sfxPlayer.currentTime = 0;
+	}
+
+  </script>
+</body>
+
+</html>
