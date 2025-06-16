@@ -56,7 +56,7 @@ def get_audio_moods():
     if os.path.exists(audio_path):
         for item in os.listdir(audio_path):
             mood_path = os.path.join(audio_path, item)
-            if os.path.isdir(mood_path):
+            if os.path.isdir(mood_path)and item != "sfx":
                 audio_files = [f for f in os.listdir(mood_path) 
                              if allowed_file(f, ALLOWED_AUDIO_EXTENSIONS)]
                 if audio_files:
@@ -247,6 +247,33 @@ def hide_canvas():
     socketio.emit('hide_canvas')
     return jsonify({'success': True})
 
+# Soundbar
+@app.route('/soundbar')
+def soundbar():
+    return render_template('soundbar.html')
+    
+@app.route("/play_sfx_soundbar/<sfx>")
+def play_sfx_soundbar(sfx):
+    loop = request.args.get("loop", "false").lower() == "true"
+    sound_path = f"/audio/sfx/{sfx}"
+    socketio.emit("play_sfx", {"path": sound_path, "loop": loop})
+    return jsonify({"success": True})
+
+@app.route("/get_sfx_list")
+def get_sfx_list():
+    import os
+    sfx_dir = os.path.join("audio", "sfx")
+    try:
+        files = [f for f in os.listdir(sfx_dir) if f.endswith(('.mp3', '.wav'))]
+        return jsonify({"sounds": sorted(files)})
+    except Exception as e:
+        return jsonify({"sounds": [], "error": str(e)}), 500
+        
+@app.route('/audio/sfx/<path:filename>')
+def serve_sfx(filename):
+    return send_from_directory('audio/sfx', filename)
+
+
 # Gestione dadi
 @app.route('/roll_dice/<die>')
 def roll_dice(die):
@@ -286,21 +313,12 @@ def handle_connect():
 def handle_disconnect():
     print('Client disconnected')
 
-# Shutdown
-@app.route('/shutdown')
+@app.route('/shutdown', methods=['POST'])
 def shutdown():
-    socketio.emit('shutdown', namespace='/')
-    return """
-    <html>
-        <body style="background:black;color:white;font-family:sans-serif;">
-            <script>
-                window.open('','_self').close();
-                setTimeout(() => window.close(), 500);
-            </script>
-            <h2>🔌 Applicazione chiusa. Puoi ora chiudere la finestra del terminale.</h2>
-        </body>
-    </html>
-    """
+    # socketio.emit('shutdown', namespace='/')  # Notifica al frontend
+    time.sleep(0.5)
+    os._exit(0)  # ctrl+c
+
 
 # Avvio applicazione
 if __name__ == '__main__':
